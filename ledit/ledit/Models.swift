@@ -23,6 +23,8 @@ struct ProjectFile: Identifiable, Hashable {
         case .javascript: return "j.circle.fill"
         case .json: return "curlybraces"
         case .markdown: return "doc.text"
+        case .html: return "h.circle.fill"
+        case .css: return "c.circle.fill"
         case .plain: return "doc"
         }
     }
@@ -34,6 +36,8 @@ struct ProjectFile: Identifiable, Hashable {
         case .javascript: return .yellow
         case .json: return .green
         case .markdown: return .purple
+        case .html: return Color(red: 1.0, green: 0.67, blue: 0.0) // Orange for HTML
+        case .css: return Color(red: 0.2, green: 0.66, blue: 0.99) // Blue for CSS
         case .plain: return .gray
         }
     }
@@ -46,10 +50,38 @@ enum Language: String, CaseIterable {
     case javascript = "JavaScript"
     case json = "JSON"
     case markdown = "Markdown"
+    case html = "HTML"
+    case css = "CSS"
     case plain = "Plain Text"
     
     var displayName: String {
         return self.rawValue
+    }
+    
+    var icon: String {
+        switch self {
+        case .swift: return "swift"
+        case .python: return "p.circle.fill"
+        case .javascript: return "j.circle.fill"
+        case .json: return "curlybraces"
+        case .markdown: return "doc.text"
+        case .html: return "h.circle.fill"
+        case .css: return "c.circle.fill"
+        case .plain: return "doc"
+        }
+    }
+    
+    var iconColor: Color {
+        switch self {
+        case .swift: return .orange
+        case .python: return .blue
+        case .javascript: return .yellow
+        case .json: return .green
+        case .markdown: return .purple
+        case .html: return Color(red: 1.0, green: 0.67, blue: 0.0) // Orange for HTML
+        case .css: return Color(red: 0.2, green: 0.66, blue: 0.99) // Blue for CSS
+        case .plain: return .gray
+        }
     }
     
     static func detect(from filename: String) -> Language {
@@ -60,6 +92,8 @@ enum Language: String, CaseIterable {
         case "js", "jsx", "ts", "tsx": return .javascript
         case "json": return .json
         case "md", "markdown": return .markdown
+        case "html", "htm": return .html
+        case "css": return .css
         default: return .plain
         }
     }

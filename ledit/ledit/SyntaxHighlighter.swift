@@ -57,6 +57,10 @@ struct SyntaxHighlighter {
             highlightJSONNS(text: text, in: result)
         case .markdown:
             highlightMarkdownNS(text: text, in: result)
+        case .html:
+            highlightHTMLNS(text: text, in: result)
+        case .css:
+            highlightCSSNS(text: text, in: result)
         case .plain:
             break
         }
@@ -253,6 +257,122 @@ struct SyntaxHighlighter {
             let matches = regex.matches(in: text, options: [], range: fullRange)
             for match in matches {
                 attributedString.addAttribute(.foregroundColor, value: UIColor(theme.function), range: match.range)
+            }
+        }
+    }
+    
+    private func highlightHTMLNS(text: String, in attributedString: NSMutableAttributedString) {
+        let nsString = text as NSString
+        let fullRange = NSRange(location: 0, length: nsString.length)
+        var highlightedRanges: [NSRange] = []
+        
+        // HTML Comments
+        if let regex = try? NSRegularExpression(pattern: "<!--[\\s\\S]*?-->", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                attributedString.addAttribute(.foregroundColor, value: UIColor(theme.comment), range: match.range)
+                highlightedRanges.append(match.range)
+            }
+        }
+        
+        // HTML Tags (tag names)
+        if let regex = try? NSRegularExpression(pattern: "</?([a-zA-Z][a-zA-Z0-9]*)", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.keyword), range: match.range)
+                }
+            }
+        }
+        
+        // Closing brackets
+        if let regex = try? NSRegularExpression(pattern: "/?>", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.keyword), range: match.range)
+                }
+            }
+        }
+        
+        // Attributes
+        if let regex = try? NSRegularExpression(pattern: "\\s([a-zA-Z-]+)=", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.type), range: match.range)
+                }
+            }
+        }
+        
+        // Attribute values (strings)
+        if let regex = try? NSRegularExpression(pattern: "\"[^\"]*\"|'[^']*'", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.string), range: match.range)
+                }
+            }
+        }
+    }
+    
+    private func highlightCSSNS(text: String, in attributedString: NSMutableAttributedString) {
+        let nsString = text as NSString
+        let fullRange = NSRange(location: 0, length: nsString.length)
+        var highlightedRanges: [NSRange] = []
+        
+        // CSS Comments
+        if let regex = try? NSRegularExpression(pattern: "/\\*[\\s\\S]*?\\*/", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                attributedString.addAttribute(.foregroundColor, value: UIColor(theme.comment), range: match.range)
+                highlightedRanges.append(match.range)
+            }
+        }
+        
+        // Selectors (class, id, element)
+        if let regex = try? NSRegularExpression(pattern: "^\\s*([.#]?[a-zA-Z_-][a-zA-Z0-9_-]*)\\s*\\{", options: .anchorsMatchLines) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let selectorRange = match.range(at: 1)
+                    if !isInHighlightedRange(selectorRange, highlightedRanges: highlightedRanges) {
+                        attributedString.addAttribute(.foregroundColor, value: UIColor(theme.keyword), range: selectorRange)
+                    }
+                }
+            }
+        }
+        
+        // Properties
+        if let regex = try? NSRegularExpression(pattern: "\\s*([a-zA-Z-]+)\\s*:", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if match.numberOfRanges > 1 {
+                    let propRange = match.range(at: 1)
+                    if !isInHighlightedRange(propRange, highlightedRanges: highlightedRanges) {
+                        attributedString.addAttribute(.foregroundColor, value: UIColor(theme.type), range: propRange)
+                    }
+                }
+            }
+        }
+        
+        // Values (colors, units)
+        if let regex = try? NSRegularExpression(pattern: "#[a-fA-F0-9]{3,8}|\\d+(\\.\\d+)?(px|em|rem|%|vh|vw|deg|s|ms)?", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.number), range: match.range)
+                }
+            }
+        }
+        
+        // Strings
+        if let regex = try? NSRegularExpression(pattern: "\"[^\"]*\"|'[^']*'", options: []) {
+            let matches = regex.matches(in: text, options: [], range: fullRange)
+            for match in matches {
+                if !isInHighlightedRange(match.range, highlightedRanges: highlightedRanges) {
+                    attributedString.addAttribute(.foregroundColor, value: UIColor(theme.string), range: match.range)
+                }
             }
         }
     }

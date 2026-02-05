@@ -2,6 +2,20 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WidgetKit
 
+// MARK: - Device Detection
+struct DeviceInfo {
+    static var isIPad: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+    
+    static var hasKeyboard: Bool {
+        // Check if hardware keyboard is connected
+        GCKeyboard.coalesced != nil
+    }
+}
+
+import GameController
+
 // MARK: - Main IDE View
 struct LeditEditorHomeView: View {
     @EnvironmentObject var appState: AppState
@@ -18,7 +32,9 @@ struct LeditEditorHomeView: View {
     @State private var showingSearch = false
     @State private var editorAppeared = false
     @State private var isLiveActivityActive = false
+    @State private var useiPadMode = DeviceInfo.isIPad
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     
     init(project: ProjectInfo? = nil, settings: AppSettings = AppSettings()) {
         self.projectInfo = project
@@ -30,6 +46,36 @@ struct LeditEditorHomeView: View {
     }
     
     var body: some View {
+        Group {
+            // Use iPad mode for iPad with regular size class (full screen or large split view)
+            if useiPadMode && horizontalSizeClass == .regular {
+                iPadEditorView(project: project)
+                    .environmentObject(appState)
+                    .iPadKeyboardCommands()
+            } else {
+                standardEditorView
+            }
+        }
+        .background(theme.background)
+        .navigationTitle(projectInfo?.name ?? project.selectedFile?.name ?? "Ledit")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(false)
+        .sheet(isPresented: $showingNewFileSheet) {
+            NewFileSheet(project: project, isPresented: $showingNewFileSheet)
+        }
+        .alert("Rename File", isPresented: $showingRenameAlert) {
+            TextField("New name", text: $newFileName)
+            Button("Cancel", role: .cancel) { }
+            Button("Rename") {
+                if let file = fileToRename {
+                    project.renameFile(file, to: newFileName)
+                }
+            }
+        }
+    }
+    
+    // MARK: - Standard Editor View (iPhone / Compact)
+    private var standardEditorView: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
             
@@ -55,10 +101,6 @@ struct LeditEditorHomeView: View {
                 }
             }
         }
-        .background(theme.background)
-        .navigationTitle(projectInfo?.name ?? project.selectedFile?.name ?? "Ledit")
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationBarBackButtonHidden(false)
         .toolbar {
             ToolbarItemGroup(placement: .navigationBarLeading) {
                 Button {
@@ -74,30 +116,38 @@ struct LeditEditorHomeView: View {
                 } label: {
                     Image(systemName: "doc.badge.plus")
                 }
+            }
+            
+            ToolbarItemGroup(placement: .navigationBarTrailing) {
+                if DeviceInfo.isIPad {
+                    Button {
+                        useiPadMode.toggle()
+                    } label: {
+                        Image(systemName: useiPadMode ? "iphone" : "desktopcomputer")
+                    }
                 }
                 
-                ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSearch.toggle()
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                    }
-                    
-                    Button {
-                        project.runCurrentFile()
-                    } label: {
-                        Image(systemName: "play.fill")
-                            .foregroundColor(.green)
-                    }
-                    
-                    Menu {
-                        Section("Theme") {
-                            ForEach(EditorTheme.allThemes, id: \.name) { themeOption in
-                                Button {
-                                    withAnimation {
-                                        settings.selectedTheme = themeOption.name
-                                    }
-                                } label: {
+                Button {
+                    showingSearch.toggle()
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+                
+                Button {
+                    project.runCurrentFile()
+                } label: {
+                    Image(systemName: "play.fill")
+                        .foregroundColor(.green)
+                }
+                
+                Menu {
+                    Section("Theme") {
+                        ForEach(EditorTheme.allThemes, id: \.name) { themeOption in
+                            Button {
+                                withAnimation {
+                                    settings.selectedTheme = themeOption.name
+                                }
+                            } label: {
                                     HStack {
                                         Text(themeOption.name)
                                         if themeOption.name == settings.selectedTheme {

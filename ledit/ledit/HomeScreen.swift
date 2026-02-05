@@ -108,11 +108,15 @@ class ProjectsManager: ObservableObject {
 struct HomeScreen: View {
     @EnvironmentObject var appState: AppState
     @StateObject private var projectsManager = ProjectsManager()
+    @StateObject private var webProjectManager = WebProjectManager()
     @State private var showingNewProject = false
+    @State private var showingNewWebProject = false
     @State private var showingCloneRepo = false
     @State private var showingSettings = false
     @State private var selectedProject: ProjectInfo?
+    @State private var selectedWebProject: WebProject?
     @State private var navigateToEditor = false
+    @State private var navigateToWebEditor = false
     @State private var appeared = false
     @State private var headerAppeared = false
     @State private var actionsAppeared = false
@@ -164,6 +168,16 @@ struct HomeScreen: View {
                 })
                 .environmentObject(appState)
             }
+            .sheet(isPresented: $showingNewWebProject) {
+                NewWebProjectSheet(
+                    isPresented: $showingNewWebProject,
+                    projectManager: webProjectManager,
+                    onCreated: { project in
+                        selectedWebProject = project
+                        navigateToWebEditor = true
+                    }
+                )
+            }
             .sheet(isPresented: $showingCloneRepo) {
                 CloneRepoSheet(projectsManager: projectsManager, onCloned: { project in
                     selectedProject = project
@@ -179,6 +193,17 @@ struct HomeScreen: View {
                 if let project = selectedProject {
                     LeditEditorHomeView(project: project, settings: appState.settings)
                         .environmentObject(appState)
+                }
+            }
+            .navigationDestination(isPresented: $navigateToWebEditor) {
+                if let webProject = selectedWebProject {
+                    WebPreviewView(
+                        project: webProject,
+                        previewManager: WebPreviewManager(),
+                        onUpdate: { updated in
+                            webProjectManager.updateProject(updated)
+                        }
+                    )
                 }
             }
             .onAppear {
@@ -265,16 +290,12 @@ struct HomeScreen: View {
                 }
                 
                 QuickActionCard(
-                    icon: "folder.fill",
-                    title: "Open Folder",
-                    color: .purple,
+                    icon: "globe",
+                    title: "Web Project",
+                    color: Color(red: 1.0, green: 0.67, blue: 0.0),
                     theme: theme
                 ) {
-                    // In a real app, this would open a folder picker
-                    let project = ProjectInfo(name: "Local Project", iconName: "folder.fill", colorHex: "AF52DE")
-                    projectsManager.addProject(project)
-                    selectedProject = project
-                    navigateToEditor = true
+                    showingNewWebProject = true
                 }
             }
         }
